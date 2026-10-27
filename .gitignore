@@ -5,13 +5,8 @@ studio/contracts/out
 studio/contracts/cache
 studio/.arc-studio
 .arc-studio
-tur*.json
-tur*.err
-tarif-*.txt
 studio/node_modules
 studio/dist
 studio/.env
 studio/console.jsonl
 ops/node_modules
-studio/AGENTS.md
-studio/.agents
