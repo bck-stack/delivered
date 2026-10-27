@@ -1,0 +1,10 @@
+node_modules
+.wrangler
+.dev.vars
+studio/contracts/out
+studio/contracts/cache
+studio/.arc-studio
+.arc-studio
+tur*.json
+tur*.err
+tarif-*.txt

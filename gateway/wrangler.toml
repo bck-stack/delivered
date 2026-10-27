@@ -1,0 +1,14 @@
+name = "delivered"
+main = "src/worker.js"
+account_id = "8c67f51d9b44398f2ab031fb2a4db4e4"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+services = [{ binding = "TOOLS", service = "api" }]
+kv_namespaces = [{ binding = "RECEIPTS", id = "2e9af583941a4feaa766499523aa397e" }]
+
+[vars]
+CHAIN_ID = "5042002"
+RPC_URL = "https://rpc.testnet.arc.network"
+CONTRACT = "0xb33dbe7b6016c88e1455a49cf840709440a93728"
+PROVIDER = "0x0000000000000000000000000000000000000000"
