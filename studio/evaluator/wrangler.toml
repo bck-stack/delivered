@@ -18,7 +18,7 @@ id = "138d6231360348ce84e7867067dac767"
 # Arc mainnet (the Arc Testnet run used KV 2e8cfb1b0ab14251b48bdc8b76af1ece and the defaults in worker.ts)
 [vars]
 CHAIN_ID         = "5042"
-RPC_URL          = "https://rpc.mainnet.arc.io"
+RPC_URL          = "https://rpc.blockdaemon.mainnet.arc.io"
 CONTRACT_ADDRESS = "0x6f721eb4f16a972e9d77e4a57fd5324e513476a9"
 GATEWAY_URL      = "https://delivered.chainmarket-api.workers.dev"
 
