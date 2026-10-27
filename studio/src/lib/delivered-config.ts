@@ -23,17 +23,17 @@ export const REPUTATION_REGISTRY = '0x8004B663056A597Dffe9eCcC1965A193B7388713' 
 
 // ── Provider ───────────────────────────────────────────────────────────────
 // Filled after running scripts/setup-provider.ts
-export const PROVIDER_ADDRESS  = '' as `0x${string}` // e.g. '0x...'
-export const PROVIDER_AGENT_ID = 0n                  // e.g. 5n
+export const PROVIDER_ADDRESS  = '0x62E057f10DA86da124b8D22dE8eB464210105481' as `0x${string}`
+export const PROVIDER_AGENT_ID = 897606n
 
 // ── Evaluator ──────────────────────────────────────────────────────────────
 // Default address shown in the "Buy a check" form (user can override).
 // Filled after deploying the evaluator Worker.
-export const DEFAULT_EVALUATOR = '' as `0x${string}`
+export const DEFAULT_EVALUATOR = '0xcb98A6e5BD4e6CF2262B2fDd17b28DB9bC53814d' as `0x${string}`
 
 // URL of the deployed evaluator Worker — used by Ledger to show reasons.
 // Leave empty until deployed.
-export const EVALUATOR_URL = ''
+export const EVALUATOR_URL = 'https://delivered-evaluator.chainmarket-api.workers.dev'
 
 // ── Gateway ────────────────────────────────────────────────────────────────
 export const GATEWAY_URL = 'https://delivered.chainmarket-api.workers.dev'

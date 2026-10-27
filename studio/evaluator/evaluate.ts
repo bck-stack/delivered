@@ -198,20 +198,29 @@ export async function runPass(opts: {
   const head = await publicClient.getBlockNumber()
   const lastBlockStr = await kv.get(lastBlockKey)
   const fromBlock = lastBlockStr ? BigInt(lastBlockStr) + 1n : (head > 10000n ? head - 10000n : 0n)
+  // Arc's public RPC refuses log queries over a wide block range, so the scan goes in steps,
+  // and a pass that falls far behind catches up over the next passes.
+  const STEP = 4000n
+  const MAX_STEPS = 8n
+  const toBlock = head - fromBlock > STEP * MAX_STEPS ? fromBlock + STEP * MAX_STEPS - 1n : head
 
-  console.log(`[evaluator] scanning blocks ${fromBlock}…${head} for DeliverySubmitted`)
+  console.log(`[evaluator] scanning blocks ${fromBlock}…${toBlock} for DeliverySubmitted`)
 
-  const logs = await publicClient.getLogs({
-    address: contractAddress,
-    event: DELIVERED_ABI.find((x) => x.type === 'event' && x.name === 'DeliverySubmitted') as never,
-    fromBlock,
-    toBlock: head,
-  })
+  const logs: Awaited<ReturnType<typeof publicClient.getLogs>> = []
+  for (let start = fromBlock; start <= toBlock; start += STEP) {
+    const end = start + STEP - 1n > toBlock ? toBlock : start + STEP - 1n
+    logs.push(...(await publicClient.getLogs({
+      address: contractAddress,
+      event: DELIVERED_ABI.find((x) => x.type === 'event' && x.name === 'DeliverySubmitted') as never,
+      fromBlock: start,
+      toBlock: end,
+    })))
+  }
 
   console.log(`[evaluator] found ${logs.length} DeliverySubmitted event(s)`)
 
   for (const log of logs) {
-    const args = (log as { args: { jobId: bigint } }).args
+    const args = (log as unknown as { args: { jobId: bigint } }).args
     const jobId = args.jobId
     const kvKey = `eval:${jobId}`
 
@@ -292,5 +301,5 @@ export async function runPass(opts: {
   }
 
   // Update last processed block
-  await kv.put(lastBlockKey, String(head))
+  await kv.put(lastBlockKey, String(toBlock))
 }

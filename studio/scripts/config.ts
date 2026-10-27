@@ -55,8 +55,8 @@ const MAINNET: NetworkConfig = {
   explorerBase: 'https://explorer.arc.io',
   usdcAddress: '0x3600000000000000000000000000000000000000',
   deliveredAddress: '0x0000000000000000000000000000000000000000', // TODO: fill after mainnet deploy
-  identityRegistry:  '0x0000000000000000000000000000000000000000', // TODO: verify mainnet registry
-  reputationRegistry:'0x0000000000000000000000000000000000000000', // TODO: verify mainnet registry
+  identityRegistry:  '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432', // checked on chain 27 Oct 2026
+  reputationRegistry:'0x8004BAa17C55a88189AE136b182e5fdA19dE9b63', // checked on chain 27 Oct 2026
   deliverySigner:    '0xd4BF2B7639D11e8d84968Fe4fEE5f1eBFAAdeDe2',
   gateway: 'https://delivered.chainmarket-api.workers.dev',
 }
