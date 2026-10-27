@@ -19,6 +19,7 @@ export interface Env {
   EVALUATIONS: KVNamespace
   EVALUATOR_KEY: string
   // Override via wrangler.toml [vars] — defaults below are for Arc Testnet
+  CHAIN_ID?: string
   RPC_URL?: string
   CONTRACT_ADDRESS?: string
   GATEWAY_URL?: string
@@ -53,6 +54,7 @@ export default {
       gateway:          env.GATEWAY_URL       ?? DEFAULT_GATEWAY,
       evaluatorKey:     env.EVALUATOR_KEY as `0x${string}`,
       kv:               kvStore(env.EVALUATIONS),
+      chainId:          env.CHAIN_ID ? Number(env.CHAIN_ID) : undefined,
     })
   },
 

@@ -13,13 +13,14 @@ crons = ["* * * * *"]
 # then replace the placeholder id below.
 [[kv_namespaces]]
 binding = "EVALUATIONS"
-id = "2e8cfb1b0ab14251b48bdc8b76af1ece"
+id = "138d6231360348ce84e7867067dac767"
 
-# Optional env var overrides (defaults to Arc Testnet values)
-# [vars]
-# RPC_URL          = "https://rpc.testnet.arc.io"
-# CONTRACT_ADDRESS = "0x72d179ba5fedf0e6f24c0030afe66d21b5de9904"
-# GATEWAY_URL      = "https://delivered.chainmarket-api.workers.dev"
+# Arc mainnet (the Arc Testnet run used KV 2e8cfb1b0ab14251b48bdc8b76af1ece and the defaults in worker.ts)
+[vars]
+CHAIN_ID         = "5042"
+RPC_URL          = "https://rpc.mainnet.arc.io"
+CONTRACT_ADDRESS = "0x6f721eb4f16a972e9d77e4a57fd5324e513476a9"
+GATEWAY_URL      = "https://delivered.chainmarket-api.workers.dev"
 
 # Secrets (set with `wrangler secret put EVALUATOR_KEY`)
 # EVALUATOR_KEY — private key of the evaluator wallet — never commit this value

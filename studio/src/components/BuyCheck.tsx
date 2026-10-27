@@ -350,7 +350,7 @@ export function BuyCheck() {
           style={{ background: 'rgba(186,43,76,0.08)', border: '1px solid var(--danger)' }}
         >
           <span className="text-sm" style={{ color: 'var(--danger)' }}>
-            Switch to Arc Testnet to continue.
+            Switch to Arc to continue.
           </span>
           <button
             onClick={() => switchChain({ chainId: CHAIN_ID })}
@@ -397,7 +397,7 @@ export function BuyCheck() {
                     className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white transition-all hover:scale-[1.01] active:scale-[0.99]"
                     style={{ background: 'var(--accent)' }}
                   >
-                    {ic ? (wrongChain ? 'Switch to Arc Testnet' : 'Load checks') : 'Connect wallet'}
+                    {ic ? (wrongChain ? 'Switch to Arc' : 'Load checks') : 'Connect wallet'}
                   </button>
                 )}
               </ConnectKitButton.Custom>

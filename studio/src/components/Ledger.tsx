@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { createPublicClient, http, type Log } from 'viem'
-import { CHAIN, CHAIN_ID, DELIVERED_ADDRESS, GATEWAY_URL, EVALUATOR_URL, buildTxExplorerUrl } from '@/lib/delivered-config'
+import { CHAIN, CHAIN_ID, DELIVERED_ADDRESS, DEPLOY_BLOCK, GATEWAY_URL, EVALUATOR_URL, buildTxExplorerUrl } from '@/lib/delivered-config'
 import { DELIVERED_ABI } from '@/lib/delivered-abi'
 import { formatAddress, formatUsdc, statusLabel, statusColor, timeAgo, shortHash } from '@/lib/utils'
 import { ExternalLink, RefreshCw } from 'lucide-react'
@@ -18,29 +18,31 @@ interface JobRow {
 
 const publicClient = createPublicClient({ chain: CHAIN, transport: http() })
 
-async function fetchJobRows(): Promise<JobRow[]> {
-  // Get block range from current head minus lookback
-  const head = await publicClient.getBlockNumber()
-  const from = head > 50000n ? head - 50000n : 0n
+const JOB_CREATED = {
+  type: 'event',
+  name: 'JobCreated',
+  inputs: [
+    { name: 'jobId', type: 'uint256', indexed: true },
+    { name: 'client', type: 'address', indexed: true },
+    { name: 'provider', type: 'address', indexed: true },
+    { name: 'evaluator', type: 'address', indexed: false },
+    { name: 'requestHash', type: 'bytes32', indexed: false },
+    { name: 'amount', type: 'uint256', indexed: false },
+    { name: 'expiry', type: 'uint64', indexed: false },
+  ],
+} as const
 
-  const logs = await publicClient.getLogs({
-    address: DELIVERED_ADDRESS,
-    event: {
-      type: 'event',
-      name: 'JobCreated',
-      inputs: [
-        { name: 'jobId', type: 'uint256', indexed: true },
-        { name: 'client', type: 'address', indexed: true },
-        { name: 'provider', type: 'address', indexed: true },
-        { name: 'evaluator', type: 'address', indexed: false },
-        { name: 'requestHash', type: 'bytes32', indexed: false },
-        { name: 'amount', type: 'uint256', indexed: false },
-        { name: 'expiry', type: 'uint64', indexed: false },
-      ],
-    },
-    fromBlock: from,
-    toBlock: 'latest',
-  })
+async function fetchJobRows(): Promise<JobRow[]> {
+  // Get block range from current head minus lookback, never before the deployment
+  const head = await publicClient.getBlockNumber()
+  const from = head > DEPLOY_BLOCK + 50000n ? head - 50000n : DEPLOY_BLOCK
+
+  // Arc's public RPC refuses wide log ranges, so the scan goes in steps
+  const logs: Log[] = []
+  for (let start = from; start <= head; start += 4000n) {
+    const end = start + 3999n > head ? head : start + 3999n
+    logs.push(...(await publicClient.getLogs({ address: DELIVERED_ADDRESS, event: JOB_CREATED, fromBlock: start, toBlock: end })))
+  }
 
   const rows: JobRow[] = []
   for (const log of logs.reverse()) {

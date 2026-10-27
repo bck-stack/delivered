@@ -17,7 +17,7 @@ import {
   type PublicClient,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { arcTestnet } from 'viem/chains'
+import { arc, arcTestnet } from 'viem/chains'
 import { DELIVERED_ABI } from './abi'
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -169,13 +169,14 @@ export async function runPass(opts: {
   evaluatorKey: `0x${string}`
   kv: KVStore
   lastBlockKey?: string
+  chainId?: number
 }): Promise<void> {
-  const { rpcUrl, contractAddress, gateway, evaluatorKey, kv, lastBlockKey = 'lastBlock' } = opts
+  const { rpcUrl, contractAddress, gateway, evaluatorKey, kv, lastBlockKey = 'lastBlock', chainId = arcTestnet.id } = opts
 
   const account = privateKeyToAccount(evaluatorKey)
   const evaluatorAddress = account.address
 
-  const viemChain = arcTestnet // swap for mainnet chain when NETWORK=mainnet
+  const viemChain = chainId === arc.id ? arc : arcTestnet
   const publicClient: PublicClient = createPublicClient({
     chain: viemChain,
     transport: http(rpcUrl),
