@@ -20,6 +20,12 @@ An agent locks the price of one API call in USDC on Arc. The provider answers wi
 
 No fees, no admin keys, no upgradeable proxy.
 
+## Nemotron review
+
+The evaluator's rule checks prove a receipt is genuine: right job, right request, the exact response the provider signed. They cannot tell whether that response actually answers the request. With a Nebius Token Factory key set, the evaluator also sends the check, its input and the response to NVIDIA Nemotron (`nvidia/nemotron-3-super-120b-a12b` by default) and asks for a pass or fail with a one-sentence reason. A fail rejects the job and refunds the buyer; the reason is hashed on chain with the decision and shown in the app's ledger. If the model cannot be reached, the rule checks decide alone, so an outage never holds a provider's payment.
+
+Code: `studio/evaluator/judge.ts`. Turn it on with `wrangler secret put NEBIUS_API_KEY` (Worker) or `NEBIUS_API_KEY=… npx tsx evaluator/run-once.ts` (Node). `NEMOTRON_MODEL` picks another model.
+
 ## Repository
 
 | Folder | What it is |
