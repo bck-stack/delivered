@@ -6,6 +6,7 @@ An agent locks the price of one API call in USDC on Arc. The provider answers wi
 
 - App: https://delivered-app.chainmarket-api.workers.dev
 - Built in Arc Studio: https://studio.arc.io/app/f90f5b28-ee69-4c8f-b22e-8296a7592924
+- Demo video: https://youtu.be/y1jyaNtAaDQ
 
 ## What happens to the money
 
@@ -37,7 +38,9 @@ The contract, app, evaluator and scripts were written and tested in Arc Studio; 
 | Network | Delivered |
 |---|---|
 | Arc Testnet | `0x72d179ba5fedf0e6f24c0030afe66d21b5de9904` |
-| Arc | see `studio/scripts/config.ts` |
+| Arc | `0x6f721eb4f16a972e9d77e4a57fd5324e513476a9` |
+
+Demo provider on Arc: `0xC0cdb5D59CfB277d572A97672AA35910ecDC8c10`, ERC-8004 identity #2789. First paid job: [0x5b3aa04d…](https://explorer.arc.io/tx/0x5b3aa04db680338b190560f0f9c85f13a2ed20d4249496225dd50f8620b5fd1a).
 
 Testnet demo provider: `0x62E057f10DA86da124b8D22dE8eB464210105481`, ERC-8004 identity #897606.
 
