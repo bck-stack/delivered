@@ -40,4 +40,4 @@ execFileSync("npx", ["tsx", "scripts/setup-provider.ts"], {
   cwd: `${ROOT}studio`, stdio: "inherit", shell: true,
   env: { ...process.env, NETWORK: "mainnet", PROVIDER_KEY: get("PROVIDER_KEY"), PAYOUT_ADDRESS: PAYOUT },
 });
-console.log("\nDone. Tell Claude: \"ana ağ kurulumu bitti\".");
+console.log("\nDone. Contract and provider are live on Arc mainnet.");
