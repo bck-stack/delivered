@@ -674,6 +674,9 @@ export function BuyCheck() {
             <p className="text-sm font-semibold" style={{ color: 'var(--ink)' }}>
               Receipt recorded. The evaluator will review and release payment.
             </p>
+            <p className="text-xs" style={{ color: 'var(--muted)' }}>
+              This usually takes 3 to 5 minutes. The Ledger tab shows the result.
+            </p>
             {submitHash && <TxLink hash={submitHash} />}
             {refundSuccess && (
               <p className="text-sm" style={{ color: 'var(--success)' }}>Refund sent.</p>

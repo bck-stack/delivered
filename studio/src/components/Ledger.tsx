@@ -168,6 +168,7 @@ export function Ledger() {
                 <span className="mono">{formatAddress(row.client)}</span>
                 <span className="tabular-nums">${formatUsdc(row.amount)} USDC</span>
                 <span>{timeAgo(Number(row.expiry) - 1800)}</span>
+                {row.status === 2 && <span>Waiting for the evaluator, usually 3 to 5 minutes</span>}
                 {row.txHash && (
                   <a
                     href={txUrl}
