@@ -4,6 +4,7 @@
  * For each job where the evaluator address matches ours and status == Submitted:
  *   1. Fetch the delivery record from the gateway.
  *   2. Verify every acceptance criterion.
+ *   2b. If a Nebius key is set, ask NVIDIA Nemotron whether the response answers the request.
  *   3. Call complete() or reject() on the contract.
  *   4. Persist the decision in KV (or in-memory for the Node script).
  */
@@ -19,6 +20,7 @@ import {
 import { privateKeyToAccount } from 'viem/accounts'
 import { arc, arcTestnet } from 'viem/chains'
 import { DELIVERED_ABI } from './abi'
+import { judgeDelivery, type JudgeConfig } from './judge'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -97,6 +99,7 @@ async function evaluateJob(
   },
   gateway: string,
   evaluatorAddress: string,
+  judge?: JudgeConfig,
 ): Promise<{ decision: 'complete' | 'reject' | 'wait'; reason: string }> {
   // Only act on our own jobs that are Submitted (status == 2)
   if (onChainJob.evaluator.toLowerCase() !== evaluatorAddress.toLowerCase()) {
@@ -157,6 +160,13 @@ async function evaluateJob(
     return { decision: 'reject', reason: 'requestHash does not match tool+input' }
   }
 
+  // (f) Nemotron's reading of the response; without a key, or if the model is unreachable, the rules decide
+  if (judge) {
+    const v = await judgeDelivery(judge, delivery.tool, delivery.input, delivery.response)
+    if (v?.verdict === 'fail') return { decision: 'reject', reason: `Nemotron: ${v.reason}` }
+    if (v?.verdict === 'pass') return { decision: 'complete', reason: `all criteria met; Nemotron: ${v.reason}` }
+  }
+
   return { decision: 'complete', reason: 'all criteria met' }
 }
 
@@ -170,8 +180,9 @@ export async function runPass(opts: {
   kv: KVStore
   lastBlockKey?: string
   chainId?: number
+  judge?: JudgeConfig
 }): Promise<void> {
-  const { rpcUrl, contractAddress, gateway, evaluatorKey, kv, lastBlockKey = 'lastBlock', chainId = arcTestnet.id } = opts
+  const { rpcUrl, contractAddress, gateway, evaluatorKey, kv, lastBlockKey = 'lastBlock', chainId = arcTestnet.id, judge } = opts
 
   const account = privateKeyToAccount(evaluatorKey)
   const evaluatorAddress = account.address
@@ -257,7 +268,7 @@ export async function runPass(opts: {
       continue
     }
 
-    const { decision, reason } = await evaluateJob(jobId, onChainJob, gateway, evaluatorAddress)
+    const { decision, reason } = await evaluateJob(jobId, onChainJob, gateway, evaluatorAddress, judge)
 
     if (decision === 'wait') {
       console.log(`[evaluator] job ${jobId}: waiting — ${reason}`)

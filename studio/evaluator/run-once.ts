@@ -8,10 +8,12 @@
  * Required env:
  *   EVALUATOR_KEY  — private key (never logged)
  *   NETWORK        — "testnet" (default) | "mainnet"
+ *   NEBIUS_API_KEY — optional; turns on the Nemotron review
  */
 
 import { runPass, type EvaluationRecord, type KVStore } from './evaluate'
 import { getConfig, getNetwork } from '../scripts/config'
+import { DEFAULT_BASE_URL, DEFAULT_MODEL } from './judge'
 
 const evaluatorKey = process.env.EVALUATOR_KEY as `0x${string}` | undefined
 if (!evaluatorKey) { console.error('EVALUATOR_KEY is required'); process.exit(1) }
@@ -37,6 +39,9 @@ async function main() {
     gateway: cfg.gateway,
     evaluatorKey,
     kv,
+    judge: process.env.NEBIUS_API_KEY
+      ? { apiKey: process.env.NEBIUS_API_KEY, model: process.env.NEMOTRON_MODEL ?? DEFAULT_MODEL, baseUrl: DEFAULT_BASE_URL }
+      : undefined,
   })
 
   // Print any decisions made this run

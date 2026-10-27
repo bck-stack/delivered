@@ -8,12 +8,14 @@
  *
  * Secrets (set with `wrangler secret put`):
  *   EVALUATOR_KEY  — private key of the evaluator wallet (never logged)
+ *   NEBIUS_API_KEY — optional; turns on the Nemotron review (evaluator/judge.ts)
  *
  * KV binding: EVALUATIONS (declared in wrangler.toml)
  * All env vars below can be overridden via wrangler.toml [vars] or secrets.
  */
 
 import { runPass, type EvaluationRecord, type KVStore } from './evaluate'
+import { DEFAULT_BASE_URL, DEFAULT_MODEL } from './judge'
 
 export interface Env {
   EVALUATIONS: KVNamespace
@@ -23,6 +25,8 @@ export interface Env {
   RPC_URL?: string
   CONTRACT_ADDRESS?: string
   GATEWAY_URL?: string
+  NEBIUS_API_KEY?: string
+  NEMOTRON_MODEL?: string
 }
 
 const CORS = {
@@ -55,6 +59,9 @@ export default {
       evaluatorKey:     env.EVALUATOR_KEY as `0x${string}`,
       kv:               kvStore(env.EVALUATIONS),
       chainId:          env.CHAIN_ID ? Number(env.CHAIN_ID) : undefined,
+      judge:            env.NEBIUS_API_KEY
+        ? { apiKey: env.NEBIUS_API_KEY, model: env.NEMOTRON_MODEL ?? DEFAULT_MODEL, baseUrl: DEFAULT_BASE_URL }
+        : undefined,
     })
   },
 
