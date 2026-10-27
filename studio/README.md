@@ -1,96 +1,99 @@
 # Delivered
 
-Pay-on-delivery USDC escrow for AI agents buying API calls on Arc Testnet. A client agent funds a job; the provider delivers via a signed receipt; an independent evaluator releases or refunds the escrow. Provider reputation is written to the ERC-8004 registry on every outcome.
+Agents pay for API calls only when the result arrives. Delivered is a USDC escrow protocol on Arc that releases payment only after an independent evaluator confirms a valid delivery receipt.
 
-Built with [Arc Studio](https://studio.arc.io). Built for Arc Microgrants.
+Built with [Arc Studio](https://studio.arc.io)
 
-## Tech Stack
+## How it works
 
-- Solidity 0.8.28 + Foundry
-- OpenZeppelin 5.6.1 (ReentrancyGuard, SafeERC20, EIP712, ECDSA)
-- ERC-8183 job semantics (standalone implementation)
-- ERC-8004 reputation registry (canonical Arc Testnet deployment)
-- Chain: Arc Testnet (Chain ID 5042002)
-- Payment token: USDC at `0x3600000000000000000000000000000000000000` (6 decimals)
+1. **Buy** — the buyer approves USDC, calls `createAndFundJob`, and funds the escrow.
+2. **Deliver** — the buyer posts to the gateway (`POST /deliver`). The provider runs the check, signs a receipt, and returns the result.
+3. **Submit** — the buyer submits the signed receipt on-chain (`submitWithSignature`).
+4. **Evaluate** — the evaluator agent verifies the receipt and calls `complete` (payment released) or `reject` (refund sent).
 
-## Contracts
+If the provider admits failure (receipt status = 1) the buyer can claim a refund immediately. If the job expires without a submission, anyone can trigger the refund.
 
-| Contract | Address (Arc Testnet) |
-|---|---|
-| Delivered | `0xb33dbe7b6016c88e1455a49cf840709440a93728` |
+## Stack
 
-## Development
+- Smart contract: Solidity, Foundry, Arc Testnet (USDC as gas)
+- Web app: React, Vite, TypeScript, wagmi, ConnectKit, viem, Tailwind CSS
+- Evaluator: Cloudflare Worker (cron) + Node script
+- Scripts: TypeScript, viem, `npx tsx`
 
-### Prerequisites
+## Deployed contracts
 
-- [Foundry](https://book.getfoundry.sh/getting-started/installation)
-- [Bun](https://bun.sh)
+| Network     | Address |
+|-------------|---------|
+| Arc Testnet | `0x72d179ba5fedf0e6f24c0030afe66d21b5de9904` |
+| Arc Mainnet | TBD |
 
-### Install
-
-```bash
-bun install
-```
-
-### Build contracts
-
-```bash
-bun run contracts:build
-# or: forge build
-```
-
-### Run tests
-
-```bash
-bun run contracts:test
-# or: forge test -v
-```
-
-### Environment Variables
-
-None required for contract build and test. The contract hardcodes USDC and the ERC-8004 reputation registry address for Arc Testnet.
+## Environment variables
 
 | Variable | Purpose |
-|---|---|
-| `RPC_PROXY_BASE_URL` | RPC proxy base URL — optional outside Arc Studio |
-| `RPC_PROXY_TOKEN` | RPC proxy auth token — optional outside Arc Studio |
-| `RPC_PROXY_CHAINS` | Comma-separated chain keys — optional outside Arc Studio |
+|----------|---------|
+| `PROVIDER_KEY` | Private key of the provider wallet (setup script only) |
+| `PAYOUT_ADDRESS` | Where USDC goes on job completion; defaults to the provider address (optional) |
+| `EVALUATOR_KEY` | Private key of the evaluator wallet (evaluator and e2e scripts only) |
+| `PROVIDER_ADDR` | Provider's registered address — printed by setup-provider.ts (e2e script) |
+| `NETWORK` | `testnet` (default) or `mainnet` (all scripts) |
+| `RPC_PROXY_BASE_URL`, `RPC_PROXY_TOKEN` | Arc Studio RPC proxy — optional, auto-detected from env |
 
-## Contract Overview
+Never put private keys in source files. Put them in environment variables or a local `.env` file that is listed in `.gitignore`.
 
-### Roles
+## Running the app
 
-- **client** — AI agent wallet that buys one API call. Creates and funds the job.
-- **provider** — API seller. Registers a `deliverySigner` address that signs delivery receipts off-chain. Must call `registerProvider(agentId, payoutAddress)` and `setDeliverySigner(signerAddr)` before accepting jobs.
-- **evaluator** — Independent checker named in the job. Sole authority to complete (pay provider) or reject (refund client).
-
-### Job Lifecycle
-
-1. `createAndFundJob(provider, evaluator, expiry, requestHash, amount)` — client approves USDC then calls this; both job creation and funding happen atomically.
-2. Provider's delivery signer signs an EIP-712 `DeliveryReceipt{jobId, requestHash, responseHash, status, deliveredAt}`. Anyone calls `submitWithSignature(...)` to record it on-chain.
-3. Evaluator calls `complete(jobId, reasonHash)` to pay the provider, or `reject(jobId, reasonHash)` to refund the client.
-
-### Automatic Refund Paths
-
-- `deliveryStatus = 1` (admitted failure): client calls `claimRefund` immediately.
-- Job expired without submission: client calls `claimRefund` after `expiry`.
-- Evaluator timeout: client calls `claimRefund` 24 hours after submission if evaluator hasn't acted.
-
-### Provider Score
-
-```solidity
-getProviderStats(address provider) returns (ProviderStats memory stats, uint8 score)
+```
+bun install
+bun run dev
 ```
 
-`score = completed * 100 / (completed + rejected + expired)`. Zero-jobs default: 50. Admitted failures tracked separately and excluded from denominator.
+Open [http://localhost:5173](http://localhost:5173).
 
-### ERC-8004 Reputation Feedback
+## Provider setup (one time)
 
-| Outcome | value | tag2 |
-|---|---|---|
-| Completed | +10 | "completed" |
-| Rejected | -10 | "rejected" |
-| Expired | -5 | "expired" |
-| Admitted failure | -2 | "failed-admitted" |
+Fund the provider wallet with testnet USDC, then run:
 
-Reputation writes are wrapped in `try/catch` — a provider without a registered ERC-8004 agentId simply skips the write.
+```
+PROVIDER_KEY=0x… npx tsx scripts/setup-provider.ts
+```
+
+Copy the printed `PROVIDER_ADDRESS` and `PROVIDER_AGENT_ID` into `src/lib/delivered-config.ts`.
+
+## Evaluator
+
+**Deploy to Cloudflare Workers:**
+
+```
+cd evaluator
+wrangler kv:namespace create EVALUATIONS          # copy the id into wrangler.toml
+wrangler secret put EVALUATOR_KEY                 # paste the private key
+wrangler deploy
+```
+
+The Worker runs every minute. After deploy, copy the Worker URL into `EVALUATOR_URL` in `src/lib/delivered-config.ts`.
+
+**Run locally (one pass):**
+
+```
+EVALUATOR_KEY=0x… npx tsx evaluator/run-once.ts
+```
+
+## End-to-end test
+
+Do not run this automatically. Read `scripts/e2e.ts` first. Requires funded wallets.
+
+```
+BUYER_KEY=0x… EVALUATOR_KEY=0x… PROVIDER_ADDR=0x… npx tsx scripts/e2e.ts
+```
+
+## Tests
+
+```
+forge test
+```
+
+## Build
+
+```
+bun run build
+```

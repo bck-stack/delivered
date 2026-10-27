@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {Test} from "forge-std/Test.sol";
 import {Delivered} from "../Delivered.sol";
 import {MockERC20} from "../test-helpers/MockERC20.sol";
+import {MockReputationRegistry, MockRevertingRegistry} from "../test-helpers/MockReputationRegistry.sol";
 
 /// @dev Shared base for all Delivered test suites.
 abstract contract DeliveredTestBase is Test {
@@ -50,13 +51,12 @@ abstract contract DeliveredTestBase is Test {
         vm.etch(USDC_ADDR, address(mockTemplate).code);
         usdc = MockERC20(USDC_ADDR);
 
-        // 2. Deploy a no-op stub at the reputation registry address.
-        //    Delivered wraps calls in try/catch, so an empty contract is fine.
-        MockERC20 repStub = new MockERC20("stub", "stub", 0); // any code, no USDC logic
+        // 2. Deploy a no-op reputation registry stub and etch it at REP_REGISTRY.
+        MockReputationRegistry repStub = new MockReputationRegistry();
         vm.etch(REP_REGISTRY, address(repStub).code);
 
-        // 3. Deploy the contract under test.
-        delivered = new Delivered();
+        // 3. Deploy the contract under test — pass REP_REGISTRY as the constructor arg.
+        delivered = new Delivered(REP_REGISTRY);
 
         // 4. Seed client with USDC and approve the contract.
         usdc.mint(clientAddr, 10_000e6);

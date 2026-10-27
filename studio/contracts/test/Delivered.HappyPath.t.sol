@@ -166,6 +166,7 @@ contract DeliveredHappyPathTest is DeliveredTestBase {
     }
 
     // ── Test 6: Evaluator timeout (submitted, 24h+) → claimRefund ──────────
+    // T-A: jobsEvaluatorTimeout incremented (NOT jobsExpired); status = Expired.
     function test_EvaluatorTimeout_ClaimRefund() public {
         uint256 jobId = _createAndFundJob();
         _submitDelivered(jobId);
@@ -176,8 +177,71 @@ contract DeliveredHappyPathTest is DeliveredTestBase {
         delivered.claimRefund(jobId);
 
         assertEq(usdc.balanceOf(clientAddr), clientBefore + AMOUNT);
+        assertEq(usdc.balanceOf(address(delivered)), 0);
 
-        (Delivered.ProviderStats memory stats,) = delivered.getProviderStats(providerAddr);
-        assertEq(stats.jobsExpired, 1);
+        // T-A: evaluator-timeout path increments jobsEvaluatorTimeout, not jobsExpired.
+        (Delivered.ProviderStats memory stats, uint8 score) = delivered.getProviderStats(providerAddr);
+        assertEq(stats.jobsEvaluatorTimeout, 1, "jobsEvaluatorTimeout should be 1");
+        assertEq(stats.jobsExpired,          0, "jobsExpired must stay 0");
+        assertEq(stats.jobsCompleted,        0);
+        assertEq(stats.jobsRejected,         0);
+        // Denominator = 0 (evaluatorTimeout excluded) → score = 50 (neutral default).
+        assertEq(score, 50, "score denominator excludes evaluatorTimeout, stays 50");
+        // Job status = Expired.
+        assertEq(uint8(_jobStatus(jobId)), uint8(Delivered.JobStatus.Expired));
+    }
+
+    // ── T-B: Score denominator excludes evaluatorTimeout ───────────────────
+    // 2 completed + 1 rejected + 1 evaluatorTimeout → denom = 3, score = 2*100/3 = 66.
+    function test_ScoreDenominator_ExcludesEvaluatorTimeout() public {
+        usdc.mint(clientAddr, 4 * AMOUNT);
+
+        // ── 2 completed ───────────────────────────────────────────────────
+        for (uint256 i = 0; i < 2; i++) {
+            uint64 expiry = uint64(block.timestamp + 1 hours);
+            vm.prank(clientAddr);
+            uint256 jobId = delivered.createAndFundJob(
+                providerAddr, evaluatorAddr, expiry, REQUEST_HASH, AMOUNT
+            );
+            bytes32 rHash = keccak256(abi.encodePacked("resp-c", i));
+            uint64 deliveredAt = uint64(block.timestamp);
+            bytes memory sig = _sign(jobId, REQUEST_HASH, rHash, 0, deliveredAt, deliverySignerKey);
+            vm.prank(relayerAddr);
+            delivered.submitWithSignature(jobId, rHash, 0, deliveredAt, sig);
+            vm.prank(evaluatorAddr);
+            delivered.complete(jobId, bytes32(0));
+        }
+
+        // ── 1 rejected ────────────────────────────────────────────────────
+        {
+            uint64 expiry = uint64(block.timestamp + 1 hours);
+            vm.prank(clientAddr);
+            uint256 jobId = delivered.createAndFundJob(
+                providerAddr, evaluatorAddr, expiry, REQUEST_HASH, AMOUNT
+            );
+            bytes32 rHash = keccak256("resp-rej");
+            uint64 deliveredAt = uint64(block.timestamp);
+            bytes memory sig = _sign(jobId, REQUEST_HASH, rHash, 0, deliveredAt, deliverySignerKey);
+            vm.prank(relayerAddr);
+            delivered.submitWithSignature(jobId, rHash, 0, deliveredAt, sig);
+            vm.prank(evaluatorAddr);
+            delivered.reject(jobId, bytes32(0));
+        }
+
+        // ── 1 evaluator timeout ───────────────────────────────────────────
+        {
+            uint256 jobId = _createAndFundJob();
+            _submitDelivered(jobId);
+            vm.warp(block.timestamp + 24 hours + 1);
+            delivered.claimRefund(jobId);
+        }
+
+        (Delivered.ProviderStats memory stats, uint8 score) = delivered.getProviderStats(providerAddr);
+        assertEq(stats.jobsCompleted,        2);
+        assertEq(stats.jobsRejected,         1);
+        assertEq(stats.jobsExpired,          0);
+        assertEq(stats.jobsEvaluatorTimeout, 1);
+        // denom = 2 + 1 + 0 = 3; score = 2*100/3 = 66
+        assertEq(score, 66, "score = 2*100/3 = 66");
     }
 }

@@ -1,0 +1,8 @@
+name = "delivered-app"
+account_id = "8c67f51d9b44398f2ab031fb2a4db4e4"
+compatibility_date = "2025-09-01"
+workers_dev = true
+
+[assets]
+directory = "../studio/dist"
+not_found_handling = "single-page-application"

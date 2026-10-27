@@ -1,13 +1,20 @@
 {
-  "contractAddress": "0xb33dbe7b6016c88e1455a49cf840709440a93728",
+  "contractAddress": "0x72d179ba5fedf0e6f24c0030afe66d21b5de9904",
   "network": "ARC-TESTNET",
   "deployerWalletId": "3c2464b2-8369-52e2-a782-800bbeca5396",
   "contract_code_path": "/home/user/app/contracts/Delivered.sol",
   "contract_compiled_code_path": "/home/user/app/contracts/out/Delivered.sol/Delivered.json",
   "contract_network_and_links": {
-    "Arc Testnet": "https://explorer.testnet.arc.io/address/0xb33dbe7b6016c88e1455a49cf840709440a93728"
+    "Arc Testnet": "https://explorer.testnet.arc.io/address/0x72d179ba5fedf0e6f24c0030afe66d21b5de9904"
   },
   "contract_deployments": [
+    {
+      "chain": "Arc Testnet",
+      "address": "0x72d179ba5fedf0e6f24c0030afe66d21b5de9904",
+      "explorerUrl": "https://explorer.testnet.arc.io/address/0x72d179ba5fedf0e6f24c0030afe66d21b5de9904",
+      "txHash": "0xb10262bd6adc5a349faccb4ad3356ade1c07b01fed24474fa99bb8101810ed2c",
+      "deployedAt": "2026-10-27T11:40:48.603Z"
+    },
     {
       "chain": "Arc Testnet",
       "address": "0xb33dbe7b6016c88e1455a49cf840709440a93728",
@@ -19,7 +26,13 @@
   "abi": [
     {
       "type": "constructor",
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "_reputationRegistry",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
       "stateMutability": "nonpayable"
     },
     {
@@ -31,19 +44,6 @@
           "name": "",
           "type": "uint256",
           "internalType": "uint256"
-        }
-      ],
-      "stateMutability": "view"
-    },
-    {
-      "type": "function",
-      "name": "REPUTATION_REGISTRY",
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "",
-          "type": "address",
-          "internalType": "address"
         }
       ],
       "stateMutability": "view"
@@ -263,6 +263,11 @@
               "internalType": "uint64"
             },
             {
+              "name": "jobsEvaluatorTimeout",
+              "type": "uint64",
+              "internalType": "uint64"
+            },
+            {
               "name": "usdcEarned",
               "type": "uint128",
               "internalType": "uint128"
@@ -439,6 +444,11 @@
           "internalType": "uint64"
         },
         {
+          "name": "jobsEvaluatorTimeout",
+          "type": "uint64",
+          "internalType": "uint64"
+        },
+        {
           "name": "usdcEarned",
           "type": "uint128",
           "internalType": "uint128"
@@ -481,6 +491,19 @@
       ],
       "outputs": [],
       "stateMutability": "nonpayable"
+    },
+    {
+      "type": "function",
+      "name": "reputationRegistry",
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "",
+          "type": "address",
+          "internalType": "address"
+        }
+      ],
+      "stateMutability": "view"
     },
     {
       "type": "function",
@@ -809,6 +832,31 @@
     },
     {
       "type": "event",
+      "name": "ReputationWriteFailed",
+      "inputs": [
+        {
+          "name": "provider",
+          "type": "address",
+          "indexed": true,
+          "internalType": "address"
+        },
+        {
+          "name": "agentId",
+          "type": "uint256",
+          "indexed": false,
+          "internalType": "uint256"
+        },
+        {
+          "name": "tag",
+          "type": "string",
+          "indexed": false,
+          "internalType": "string"
+        }
+      ],
+      "anonymous": false
+    },
+    {
+      "type": "event",
       "name": "ScoreUpdated",
       "inputs": [
         {
@@ -837,6 +885,12 @@
         },
         {
           "name": "jobsExpired",
+          "type": "uint64",
+          "indexed": false,
+          "internalType": "uint64"
+        },
+        {
+          "name": "jobsEvaluatorTimeout",
           "type": "uint64",
           "indexed": false,
           "internalType": "uint64"
