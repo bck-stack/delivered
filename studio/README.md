@@ -80,7 +80,7 @@ EVALUATOR_KEY=0x… npx tsx evaluator/run-once.ts
 
 ## End-to-end test
 
-Do not run this automatically. Read `scripts/e2e.ts` first. Requires funded wallets.
+Runs two real jobs (one delivered, one failed and refunded). Needs funded buyer and evaluator wallets.
 
 ```
 BUYER_KEY=0x… EVALUATOR_KEY=0x… PROVIDER_ADDR=0x… npx tsx scripts/e2e.ts

@@ -13,3 +13,5 @@ studio/dist
 studio/.env
 studio/console.jsonl
 ops/node_modules
+studio/AGENTS.md
+studio/.agents
