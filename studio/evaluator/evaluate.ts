@@ -231,6 +231,10 @@ export async function runPass(opts: {
 
   console.log(`[evaluator] found ${logs.length} DeliverySubmitted event(s)`)
 
+  // A job that is not ready yet keeps the saved block below it, so the next passes see it again.
+  let resumeBefore: bigint | null = null
+  let decided = false
+
   for (const log of logs) {
     const args = (log as unknown as { args: { jobId: bigint } }).args
     const jobId = args.jobId
@@ -272,6 +276,8 @@ export async function runPass(opts: {
 
     if (decision === 'wait') {
       console.log(`[evaluator] job ${jobId}: waiting — ${reason}`)
+      // Only a recent one (about 1.5 hours): an old stuck job must not hold the scan back for good.
+      if (reason !== 'not our job' && log.blockNumber != null && head - log.blockNumber < 20000n && (resumeBefore === null || log.blockNumber < resumeBefore)) resumeBefore = log.blockNumber
       continue
     }
 
@@ -310,8 +316,16 @@ export async function runPass(opts: {
       at: Date.now(),
     }
     await kv.put(kvKey, JSON.stringify(record))
+    decided = true
   }
 
-  // Update last processed block
-  await kv.put(lastBlockKey, String(toBlock))
+  // Save the scan position only when it matters: Workers KV's free plan allows 1,000 writes a day and the cron runs
+  // every minute, so writing it on every pass used the whole allowance. Rescanning a few thousand blocks is cheap
+  // (decided jobs are skipped by their eval: record), so the position is saved after a decision, when a waiting job
+  // holds it back, or once it has moved about 3,000 blocks (some 15 minutes on Arc).
+  const saved = lastBlockStr ? BigInt(lastBlockStr) : null
+  const next = resumeBefore !== null ? resumeBefore - 1n : toBlock
+  if (saved === null || decided || (resumeBefore !== null && next !== saved) || next - saved >= 3000n) {
+    await kv.put(lastBlockKey, String(next))
+  }
 }
