@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { createPublicClient, http, type Log } from 'viem'
-import { CHAIN, CHAIN_ID, DELIVERED_ADDRESS, DEPLOY_BLOCK, GATEWAY_URL, EVALUATOR_URL, buildTxExplorerUrl } from '@/lib/delivered-config'
+import { createPublicClient, http } from 'viem'
+import { CHAIN, CHAIN_ID, DELIVERED_ADDRESS, GATEWAY_URL, EVALUATOR_URL, buildTxExplorerUrl } from '@/lib/delivered-config'
 import { DELIVERED_ABI } from '@/lib/delivered-abi'
 import { formatAddress, formatUsdc, statusLabel, statusColor, timeAgo, shortHash } from '@/lib/utils'
 import { ExternalLink, RefreshCw } from 'lucide-react'
@@ -18,83 +18,50 @@ interface JobRow {
 
 const publicClient = createPublicClient({ chain: CHAIN, transport: http() })
 
-const JOB_CREATED = {
-  type: 'event',
-  name: 'JobCreated',
-  inputs: [
-    { name: 'jobId', type: 'uint256', indexed: true },
-    { name: 'client', type: 'address', indexed: true },
-    { name: 'provider', type: 'address', indexed: true },
-    { name: 'evaluator', type: 'address', indexed: false },
-    { name: 'requestHash', type: 'bytes32', indexed: false },
-    { name: 'amount', type: 'uint256', indexed: false },
-    { name: 'expiry', type: 'uint64', indexed: false },
-  ],
-} as const
+type JobTuple = readonly [bigint, string, string, string, string, `0x${string}`, `0x${string}`, bigint, bigint, bigint, number, number]
 
+/** Jobs are numbered 1, 2, 3… on the contract, so the ledger reads them by id instead of scanning event logs:
+ * Arc's RPC only takes narrow log ranges and blocks come fast, so a log window soon leaves old jobs out. */
 async function fetchJobRows(): Promise<JobRow[]> {
-  // Get block range from current head minus lookback, never before the deployment
-  const head = await publicClient.getBlockNumber()
-  const from = head > DEPLOY_BLOCK + 50000n ? head - 50000n : DEPLOY_BLOCK
-
-  // Arc's public RPC refuses wide log ranges, so the scan goes in steps
-  const logs: Log[] = []
-  for (let start = from; start <= head; start += 4000n) {
-    const end = start + 3999n > head ? head : start + 3999n
-    logs.push(...(await publicClient.getLogs({ address: DELIVERED_ADDRESS, event: JOB_CREATED, fromBlock: start, toBlock: end })))
+  const jobs: JobTuple[] = []
+  for (let id = 1n; id <= 500n; id++) {
+    const job = await publicClient.readContract({
+      address: DELIVERED_ADDRESS,
+      abi: DELIVERED_ABI,
+      functionName: 'jobs',
+      args: [id],
+    }) as JobTuple
+    if (job[0] === 0n) break
+    jobs.push(job)
   }
 
-  const rows: JobRow[] = []
-  for (const log of logs.reverse()) {
-    const args = (log as Log & { args: { jobId: bigint; client: string; amount: bigint; expiry: bigint } }).args
-    // Read live status
-    let status = 1 // Funded as default
-    try {
-      const job = await publicClient.readContract({
-        address: DELIVERED_ADDRESS,
-        abi: DELIVERED_ABI,
-        functionName: 'jobs',
-        args: [args.jobId],
-      }) as readonly [bigint, string, string, string, string, `0x${string}`, `0x${string}`, bigint, bigint, bigint, number, number]
-      status = job[11]
-    } catch {
-      // ignore
-    }
-
-    // Try to get check title from gateway
-    let checkTitle: string | undefined
-    try {
-      const r = await fetch(`${GATEWAY_URL}/delivery/${String(args.jobId)}`)
-      if (r.ok) {
-        const d = await r.json() as { tool?: string }
-        checkTitle = d.tool
-      }
-    } catch { /* ignore */ }
-
-    // Try to get evaluator reason
-    let evalReason: string | undefined
-    if (EVALUATOR_URL) {
+  return Promise.all(
+    jobs.reverse().map(async (job) => {
+      const jobId = job[0]
+      // Check name from the gateway's stored delivery
+      let checkTitle: string | undefined
       try {
-        const r = await fetch(`${EVALUATOR_URL as string}/evaluations/${String(args.jobId)}`)
-        if (r.ok) {
-          const d = await r.json() as { reason?: string }
-          evalReason = d.reason
-        }
+        const r = await fetch(`${GATEWAY_URL}/delivery/${String(jobId)}`)
+        if (r.ok) checkTitle = ((await r.json()) as { tool?: string }).tool
       } catch { /* ignore */ }
-    }
 
-    rows.push({
-      jobId: args.jobId,
-      client: args.client,
-      amount: args.amount,
-      status,
-      expiry: args.expiry,
-      txHash: log.transactionHash ?? '',
-      checkTitle,
-      evalReason,
-    })
-  }
-  return rows
+      // The evaluator's reason and its complete/reject transaction
+      let evalReason: string | undefined
+      let txHash = ''
+      if (EVALUATOR_URL) {
+        try {
+          const r = await fetch(`${EVALUATOR_URL as string}/evaluations/${String(jobId)}`)
+          if (r.ok) {
+            const d = await r.json() as { reason?: string; txHash?: string }
+            evalReason = d.reason
+            txHash = d.txHash ?? ''
+          }
+        } catch { /* ignore */ }
+      }
+
+      return { jobId, client: job[1], amount: job[7], status: job[11], expiry: job[8], txHash, checkTitle, evalReason }
+    }),
+  )
 }
 
 export function Ledger() {
